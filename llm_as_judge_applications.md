@@ -125,7 +125,7 @@ Based on patterns extracted across the corpus, judge architectures fall into six
 
 ### 3.1 Paradigm Overview
 
-The corpus reveals five primary training paradigms for building judge models, each with distinct trade-offs:
+The corpus reveals six primary training paradigms for building judge models, each with distinct trade-offs:
 
 ### 3.2 Supervised Fine-Tuning on Human Judgments
 
