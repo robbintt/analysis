@@ -9,7 +9,7 @@ Usage:
   python scripts/index_frontmatter.py [directory] [--db path/to/db.sqlite]
 
 Defaults:
-  directory: research_analysis_v2
+  directory: ml_research_analysis
   db: analysis_outputs/research_index.sqlite
 """
 
@@ -22,7 +22,7 @@ from pathlib import Path
 
 
 DB_DEFAULT = "analysis_outputs/research_index.sqlite"
-DIR_DEFAULT = "research_analysis_v2"
+DIR_DEFAULT = "ml_research_analysis"
 
 
 def init_db(conn: sqlite3.Connection):
