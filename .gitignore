@@ -1,1 +1,5 @@
 .DS_Store
+
+# SQLite transient files
+*.sqlite-wal
+*.sqlite-shm
