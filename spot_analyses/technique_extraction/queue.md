@@ -1,113 +1,80 @@
 # Technique Extraction Queue
 
-Tracks planned, in-progress, and completed extractions. See [topic_selection_and_scoping.md](topic_selection_and_scoping.md) for how topics are chosen and scoped, and [technique_extraction_procedure.md](technique_extraction_procedure.md) for how extractions are executed.
+Tracks planned, in-progress, and completed extractions.
+
+References:
+- Topic selection/scoping: [topic_selection_and_scoping.md](topic_selection_and_scoping.md)
+- Execution procedure: [technique_extraction_procedure.md](technique_extraction_procedure.md)
+
+---
+
+## How this queue is structured (low-maintenance)
+
+To minimize touchups when adding/removing topics:
+- Use **priority tiers** (`P0`, `P1`, `P2`) instead of numbered lists.
+- Keep each topic as **one table row**.
+- Update only two fields when status changes: `status` and `tier`.
+
+`status` values: `queued`, `in_progress`, `done`, `parked`
 
 ---
 
 ## Completed
 
-| Group | Papers | Scope | Notes |
-|---|---|---|---|
-| `test_time_compute_scaling` | 987 | Techniques for allocating additional compute at inference to improve output quality — reasoning budgets, search strategies, verification, self-consistency. | 20 grep categories → 3-tier taxonomy, 76.4% coverage. Artifacts: [analysis](test_time_compute_scaling.md), [papers](test_time_compute_scaling/papers.md), [option C](test_time_compute_scaling/option_c_extraction.md), [option A](test_time_compute_scaling/option_a_refinement.md). |
-| `test_time_adaptation` | 284 | Techniques for adapting model parameters or behavior at deployment to handle distribution shift without full retraining. | 41 grep patterns (Option C), 82.7% coverage (235/284), merged into 18-category final taxonomy. Artifacts: [analysis](test_time_adaptation.md), [papers](test_time_adaptation/papers.md), [option C](test_time_adaptation/option_c_extraction.md), [option A](test_time_adaptation/option_a_refinement.md). Separate from TTC scaling despite shared "test-time" prefix. |
-
-## In Progress
-
-(none)
-
-## Queued
-
-Priority order. Top = next.
-
-### 1. `multi_agent_debate`
-
-- **Scope:** Multi-LLM debate/deliberation frameworks for improving output quality through structured argumentation.
-- **Est. papers:** ~170
-- **Source:** Decomposed from "agentic orchestration" investigation. Also identified as a Tier 1 TTC technique in `test_time_compute_scaling` extraction.
-- **Dependencies:** None (but extends TTC analysis).
-- **Decomposition notes:** "Agentic orchestration" (~1040 LLM papers) split into 3 groups: this one, `agentic_workflow_design`, and `multi_agent_collaboration`. Debate is the cleanest and most technique-focused.
-
-### 2. `agentic_workflow_design`
-
-- **Scope:** Designing, generating, and optimizing agent workflow graphs — conductor models, planner-executor patterns, auto-MAS design, workflow generation.
-- **Est. papers:** ~250
-- **Source:** Decomposed from "agentic orchestration" investigation.
-- **Dependencies:** None, but contrast with `multi_agent_debate` (debate is a specific technique; workflows are the meta-layer).
-- **Decomposition notes:** May need further scoping. "Workflow" is broad — check whether it splits into "workflow generation/optimization" (the technique) vs. "workflow applications" (domain).
-
-### 3. `process_reward_models`
-
-- **Scope:** Step-level reward signals for evaluating intermediate reasoning steps — PRM training, PRM-guided search, PRM scaling.
-- **Est. papers:** ~32 (from TTC grep), likely more with expanded terms.
-- **Source:** Sub-category of `test_time_compute_scaling` verification cluster (435 papers).
-- **Dependencies:** Builds on `test_time_compute_scaling`.
-- **Decomposition notes:** The TTC extraction found 32 papers via core_contribution grep. Full-text search will likely surface 80-150+.
-
-### 4. `reasoning_distillation`
-
-- **Scope:** Compressing expensive test-time compute reasoning into smaller/faster models — teacher-student for reasoning, CoT distillation, reasoning compression.
-- **Est. papers:** ~45 (from TTC grep), likely more.
-- **Source:** Tier 2 enabling technique in `test_time_compute_scaling`.
-- **Dependencies:** Builds on `test_time_compute_scaling`.
-
-### 5. `adaptive_compute_allocation`
-
-- **Scope:** Dynamic inference compute budgeting — overthinking mitigation, query-adaptive allocation, early exit, difficulty routing, compute scaling laws.
-- **Est. papers:** ~50 (from TTC grep), likely more.
-- **Source:** Tier 1 technique in `test_time_compute_scaling`.
-- **Dependencies:** Builds on `test_time_compute_scaling`.
-
-### 6. `multi_agent_collaboration`
-
-- **Scope:** Teams of specialized LLM agents coordinating on tasks — role-based agents, agent teaming, cooperative multi-agent LLM systems.
-- **Est. papers:** ~300
-- **Source:** Decomposed from "agentic orchestration" investigation.
-- **Dependencies:** After `multi_agent_debate` and `agentic_workflow_design` to avoid overlap.
-- **Decomposition notes:** Likely needs further decomposition — bleeds into RL multi-agent and robotics. Restrict to LLM-based collaboration.
-
-### 7. `continual_online_tta`
-
-- **Scope:** Continual and online test-time adaptation under non-stationary streams — drift detection, forgetting prevention, reset strategies, streaming constraints.
-- **Est. papers:** ~35 in parent extraction, likely 60–120 standalone.
-- **Source:** **Spin-off from `test_time_adaptation` extraction** (18-category final taxonomy).
-- **Dependencies:** Builds on `test_time_adaptation`.
-- **Decomposition notes:** Keep focus on adaptation mechanics; exclude generic continual learning papers without explicit test-time adaptation.
-
-### 8. `vlm_tta`
-
-- **Scope:** Test-time adaptation for vision-language/foundation models — prompt tuning, cache/retrieval, calibration, corruption robustness.
-- **Est. papers:** ~45 in parent extraction, likely 80–150 standalone.
-- **Source:** **Spin-off from `test_time_adaptation` extraction**.
-- **Dependencies:** Builds on `test_time_adaptation`.
-- **Decomposition notes:** High overlap with prompt and training-free methods. Consider whether to keep as umbrella or split into `vlm_prompt_tta` and `vlm_cache_tta` after Phase 0 sampling.
-
-### 9. `prompt_based_tta`
-
-- **Scope:** Prompt-centric test-time adaptation across modalities — dynamic prompt tuning, memory prompts, debiased prompt optimization, test-time prompt transfer.
-- **Est. papers:** ~18 in parent extraction, likely 35–80 standalone.
-- **Source:** **Spin-off from `test_time_adaptation` extraction**.
-- **Dependencies:** Builds on `test_time_adaptation`; overlaps with `vlm_tta`.
-- **Decomposition notes:** Keep this technique-first (prompt mechanism), not model-family-first.
-
-### 10. `training_free_tta`
-
-- **Scope:** Training-free or gradient-free test-time adaptation — embedding transforms, EM updates, CMA-ES/subspace search, cache/prototype adaptation.
-- **Est. papers:** ~20 in parent extraction, likely 40–90 standalone.
-- **Source:** **Spin-off from `test_time_adaptation` extraction**.
-- **Dependencies:** Builds on `test_time_adaptation`.
-- **Decomposition notes:** Distinguish from lightweight gradient methods; include only methods explicitly avoiding backprop at deployment.
+| group | papers | status | summary | artifacts |
+|---|---:|---|---|---|
+| `test_time_compute_scaling` | 987 | done | 20 grep categories -> 3-tier taxonomy, 76.4% coverage | [analysis](test_time_compute_scaling.md), [papers](test_time_compute_scaling/papers.md), [option C](test_time_compute_scaling/option_c_extraction.md), [option A](test_time_compute_scaling/option_a_refinement.md) |
+| `test_time_adaptation` | 284 | done | 41 grep patterns (Option C), 82.7% coverage, merged into 18-category final taxonomy | [analysis](test_time_adaptation.md), [papers](test_time_adaptation/papers.md), [option C](test_time_adaptation/option_c_extraction.md), [option A](test_time_adaptation/option_a_refinement.md) |
+| `agentic_workflow_pipeline_design` | 92 | done | Reconciled into 8-category workflow-design taxonomy with standalone TTA-grade final doc | [analysis](agentic_workflow_pipeline_design.md), [papers](agentic_workflow_pipeline_design/papers.md), [option C](agentic_workflow_pipeline_design/option_c_extraction.md), [option A](agentic_workflow_pipeline_design/option_a_refinement.md) |
 
 ---
 
-## Parking Lot
+## Active Queue (priority tiers)
 
-Topics noted but not yet scoped or volume-checked.
+### P0 (next)
 
-- **Diffusion language models** — DLLMs as an alternative architecture for reasoning. ~15 papers in TTC extraction, possibly more in full corpus.
-- **Latent/implicit reasoning** — Models that reason without explicit token generation. ~8 papers in TTC, niche but growing.
-- **Speculative decoding for reasoning** — Draft-verify pipelines specifically for reasoning (not just speed). ~12 papers.
-- **RL for reasoning** — Broad (102 in TTC), but worth isolating GRPO/PPO-specific techniques.
-- **Retrieval-augmented reasoning** — RAG specifically for reasoning tasks (not general RAG). Needs disambiguation.
-- **Code generation agents** — ~173 papers. Domain application but large enough for extraction.
-- **Web/GUI agents** — ~296 papers. Domain application.
-- **Scientific research agents** — ~144 papers. Domain application.
+| group | est papers | status | scope (1-line) | source/dependency | FlatAgents/FlatMachines relevance |
+|---|---:|---|---|---|---|
+| `continual_online_tta` | 60–120 | queued | Continual/online test-time adaptation under non-stationary streams (drift, forgetting, reset) | Spin-off from `test_time_adaptation` | Directly informs long-running pipeline reliability patterns (resume/checkpoint, drift-aware control loops) used by `flatmachines` orchestration and `flatagents` model/profile switching. |
+| `adaptive_compute_allocation` | 50–120 | queued | Dynamic inference compute budgeting (early exit, query-adaptive routing, overthinking mitigation) | Spin-off from `test_time_compute_scaling` | Maps to scheduler policy design in `flatmachines` (resource gating, prioritization, depth/latency tradeoffs) and profile routing in `flatagents`. |
+| `multi_agent_debate` | ~170 | queued | Multi-LLM debate/deliberation frameworks for answer quality improvement | Decomposed from agentic umbrella; TTC-linked | Tests concrete orchestration motifs for `flatmachines` (parallel branches + reconciliation/voting) and execution strategies (`mdap_voting`-style semantics). |
+
+### P1 (high value, after P0)
+
+| group | est papers | status | scope (1-line) | source/dependency | FlatAgents/FlatMachines relevance |
+|---|---:|---|---|---|---|
+| `process_reward_models` | 80–150 | queued | Step-level reward signals for intermediate reasoning evaluation | TTC verification sub-cluster | Helps define verifier/judge role patterns (agent-as-judge, scoring loops) for `flatmachines` workflows and structured outputs in `flatagents`. |
+| `reasoning_distillation` | 45–120 | queued | Compress expensive reasoning into smaller/faster models | TTC enabling technique | Informs cheap/expensive model cascade design and profile fallback policies across both SDKs. |
+| `vlm_tta` | 80–150 | queued | Test-time adaptation for VLM/foundation models | TTA spin-off | Useful for multimodal agent pipeline design (tooling + adaptation hooks) and domain-specific model profile strategy. |
+
+### P2 (needs tighter scoping or overlap control)
+
+| group | est papers | status | scope (1-line) | source/dependency | note |
+|---|---:|---|---|---|---|
+| `prompt_based_tta` | 35–80 | queued | Prompt-centric test-time adaptation across modalities | TTA spin-off; overlaps `vlm_tta` | Run after `vlm_tta` or narrow aggressively to avoid duplication. |
+| `training_free_tta` | 40–90 | queued | Gradient-free adaptation methods at deployment | TTA spin-off | Good candidate after `continual_online_tta`; likely cross-cuts multiple completed groups. |
+| `agentic_workflow_design` | 150–300 | queued | Workflow graph design/generation/optimization for agent systems | Decomposed from umbrella | Broad; risks mixing mechanism papers with application/benchmark papers. Only run with stricter Phase 0 filters. |
+| `multi_agent_collaboration` | 200–350 | queued | Specialized agent teams coordinating on tasks | Decomposed from umbrella | Bleeds into RL/robotics; requires stronger LLM-only scope gate first. |
+
+---
+
+## Parked / Needs Scoping
+
+| topic | reason parked |
+|---|---|
+| Diffusion language models | Niche and vocabulary-fragmented in current corpus slices |
+| Latent/implicit reasoning | Small but growing; may be better as sub-family until volume increases |
+| Speculative decoding for reasoning | Cross-cuts TTC + efficiency; needs sharper boundary |
+| RL for reasoning (broad) | Too large and conflates training-time vs inference-time techniques |
+| Retrieval-augmented reasoning (broad) | High overlap with generic RAG/application papers |
+| Code generation agents | Large domain-heavy cluster; likely requires decomposition first |
+| Web/GUI agents | Large domain-heavy cluster; likely requires decomposition first |
+| Scientific research agents | Domain-heavy; strong overlap with workflow/application papers |
+
+---
+
+## Notes for insertion/deletion
+
+- Add new candidates as a single row in `P1` by default.
+- Promote/demote by changing `tier` section only (no renumbering needed).
+- When a topic is finished, move one row to **Completed** and attach artifact links.
