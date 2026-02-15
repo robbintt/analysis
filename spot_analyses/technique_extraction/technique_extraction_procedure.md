@@ -6,7 +6,7 @@ Repeatable method for identifying a research topic within the corpus, building a
 
 - Markdown analysis corpus in `ml_research_analysis_2025/` (and/or `2024/`)
 - SQLite database at `analysis_outputs/research_index.sqlite` with `papers` table
-- A research topic to investigate
+- A research topic to investigate (selected via [topic_selection_and_scoping.md](topic_selection_and_scoping.md))
 
 ## Output
 
@@ -19,6 +19,8 @@ All artifacts live under `spot_analyses/technique_extraction/`:
   - `option_c_extraction.md` — grep-seeded categories with paper counts
   - `option_a_refinement.md` — LLM refinement pass
   - `overview.md` — optional lightweight stub/overview
+
+The extraction queue lives in [`queue.md`](queue.md). For how topics are selected and scoped, see [`topic_selection_and_scoping.md`](topic_selection_and_scoping.md).
 
 ---
 
@@ -173,6 +175,49 @@ The stub goes in `spot_analyses/technique_extraction/{group}.md` — the top-lev
 See [papers.md]({group}/papers.md) ({N} papers).
 ```
 
+### 0.7 Phase-0 Quality Gate (required)
+
+Before moving to Phase 1, run a quick integrity + scope check and save results to `{group}/overview.md`.
+
+```bash
+GROUP="{group_name}"
+
+# 1) Structural integrity
+DB_COUNT=$(sqlite3 analysis_outputs/research_index.sqlite \
+  "SELECT COUNT(*) FROM spot_analysis_paper_groups WHERE group_name='${GROUP}'")
+FILE_COUNT=$(wc -l < spot_analyses/technique_extraction/${GROUP}/papers.md)
+DUP_GROUP_IDS=$(sqlite3 analysis_outputs/research_index.sqlite \
+  "SELECT COUNT(*) FROM (SELECT arxiv_id, COUNT(*) c FROM spot_analysis_paper_groups WHERE group_name='${GROUP}' GROUP BY arxiv_id HAVING c>1)")
+BROKEN_LINKS=$(sed -n 's|.*(\.\./\.\./\.\./\([^)]*\)).*|\1|p' \
+  spot_analyses/technique_extraction/${GROUP}/papers.md | while read -r p; do
+  [ -f "$p" ] || echo "$p"
+done | wc -l)
+
+echo "DB: ${DB_COUNT}, papers.md: ${FILE_COUNT}, dup_group_ids: ${DUP_GROUP_IDS}, broken_links: ${BROKEN_LINKS}"
+
+# 2) Join safety for Phase 1 export
+# If >0, arxiv_id join can duplicate rows; use filepath-based join in Phase 1.1.
+DUP_IN_PAPERS=$(sqlite3 analysis_outputs/research_index.sqlite \
+  "SELECT COUNT(*) FROM (SELECT p.arxiv_id, COUNT(*) c FROM papers p JOIN spot_analysis_paper_groups g ON g.arxiv_id=p.arxiv_id WHERE g.group_name='${GROUP}' GROUP BY p.arxiv_id HAVING c>1)")
+echo "duplicate_arxiv_rows_in_papers: ${DUP_IN_PAPERS}"
+
+# 3) Scope smoke test (manual)
+sqlite3 analysis_outputs/research_index.sqlite \
+  "SELECT g.arxiv_id || ' | ' || SUBSTR(REPLACE(p.core_contribution, CHAR(10), ' '),1,220)
+   FROM spot_analysis_paper_groups g
+   JOIN papers p ON ('ml_research_analysis_2025/' || p.filename = g.filepath
+                     OR 'ml_research_analysis_2024/' || p.filename = g.filepath)
+   WHERE g.group_name='${GROUP}' ORDER BY random() LIMIT 20;"
+```
+
+**Gate criteria (recommended):**
+- `DB_COUNT == FILE_COUNT`
+- `DUP_GROUP_IDS == 0`
+- `BROKEN_LINKS == 0`
+- Spot sample has acceptable precision for your topic (typically ≥70% clearly in-scope)
+
+If the gate fails, refine Phase 0 terms/filters and regenerate `papers.md` before continuing.
+
 ---
 
 ## Phase 1: Grep-Seeded Extraction
@@ -186,11 +231,13 @@ GROUP="{group_name}"
 WORK="/tmp/${GROUP}"
 
 sqlite3 analysis_outputs/research_index.sqlite <<SQL > ${WORK}_core_contributions.txt
-SELECT p.arxiv_id || ' | ' || REPLACE(p.core_contribution, CHAR(10), ' ')
+SELECT g.arxiv_id || ' | ' || REPLACE(p.core_contribution, CHAR(10), ' ')
 FROM spot_analysis_paper_groups g
-JOIN papers p ON p.arxiv_id = g.arxiv_id
+JOIN papers p
+  ON ('ml_research_analysis_2025/' || p.filename = g.filepath
+      OR 'ml_research_analysis_2024/' || p.filename = g.filepath)
 WHERE g.group_name = '${GROUP}'
-ORDER BY p.arxiv_id;
+ORDER BY g.arxiv_id;
 SQL
 ```
 
@@ -344,6 +391,59 @@ Read both extractions and write `analysis.md` covering:
 
 Add technique categories to the main spot analysis document (e.g., `test_time_adaptation.md`). Link to the extraction directory for full details.
 
+### 3.3 TTA-grade quality standard (required for final doc)
+
+Use `test_time_adaptation.md` as the reference quality bar. The final top-level analysis should be readable as a standalone document without chat context.
+
+Required sections in final `{group}.md`:
+
+1. **Header summary**
+   - Date
+   - Group + corpus count
+   - Grep coverage
+   - Links to Option C and Option A
+
+2. **Method summary**
+   - What Option C did
+   - What Option A did
+   - How reconciliation was performed
+
+3. **Final taxonomy** (grouped into coherent blocks)
+   - For each category include:
+     - one-line mechanism definition
+     - important sub-families (bullets)
+     - representative `arxiv_id`s (`Key papers:`)
+     - agreement/disagreement note where relevant
+
+4. **Extraction reconciliation**
+   - Where Option C and Option A agree
+   - What Option A added
+   - What Option A disagrees with / merges / drops
+
+5. **Coverage reconciliation table**
+   - total papers
+   - grep matched
+   - semantically classifiable
+   - tangential papers
+   - malformed/empty entries (if any)
+
+6. **Application/domain summary** (if meaningful)
+   - domain cluster table (`domain | ~papers | note`)
+
+### 3.4 Evidence density checks (required)
+
+Before considering Phase 3 complete, validate:
+
+- **Category evidence:** each major category has representative `arxiv_id`s in the final doc.
+- **Non-trivial taxonomy:** categories are mechanism-level, not generic labels (`framework`, `pipeline`, `system`) unless explicitly scoped.
+- **Overlap handling:** large overlaps are explained with explicit merges/splits.
+- **Standalone clarity:** reader can understand decisions without seeing Option A/Option C raw files.
+
+Recommended minimums:
+- ≥70% of final categories include a `Key papers:` line.
+- At least one explicit merge/drop decision documented in reconciliation.
+- Coverage reconciliation counts included numerically.
+
 ---
 
 ## Phase 4: Paper List Regeneration
@@ -387,12 +487,15 @@ The link format `../../../{filepath}` assumes the standard layout where `papers.
 
 ## Checklist
 
+- [ ] Topic selected and scoped (see [topic_selection_and_scoping.md](topic_selection_and_scoping.md))
+- [ ] Queue entry written in [`queue.md`](queue.md)
 - [ ] Candidate search terms chosen, hit counts checked
 - [ ] Term usage sampled and disambiguated
 - [ ] Search terms finalized, group file list generated
 - [ ] `spot_analysis_paper_groups` populated in SQLite
 - [ ] Paper list markdown generated in `{group}/papers.md`, links validated
 - [ ] Analysis stub created in `{group}.md`
+- [ ] Phase-0 quality gate run (counts/links/join safety/scope sample)
 - [ ] Core contributions exported to `/tmp/`
 - [ ] Broad term frequency scan done
 - [ ] Category grep patterns defined, iterated
@@ -401,6 +504,8 @@ The link format `../../../{filepath}` assumes the standard layout where `papers.
 - [ ] Option C extraction written
 - [ ] LLM refinement pass done (scope matched to corpus size)
 - [ ] Merge written with final category list
+- [ ] Final doc meets TTA-grade standalone structure (header, method, taxonomy, reconciliation, coverage table)
+- [ ] Final categories include representative key paper IDs (evidence density check)
 - [ ] Main analysis stub updated
 - [ ] Paper list regenerated from SQLite (Phase 4) if group membership changed
 
@@ -408,7 +513,7 @@ The link format `../../../{filepath}` assumes the standard layout where `papers.
 
 ## Notes
 
-- **Reproducibility:** The grep patterns are the reproducible artifact. Save them. The LLM pass is not reproducible but adds value.
+- **Reproducibility:** Save the exact Phase-0 group definition (SQL/grep logic), Phase-1 category grep patterns, and final reconciliation decisions in-file (`overview.md` + final analysis). The LLM pass is not deterministic, but your evidence and merge rationale must be auditable.
 - **Iteration:** Expect 2–3 rounds of pattern refinement in Phase 1. Don't try to get it perfect in one pass.
 - **False positives vs. coverage:** Err toward broader patterns and higher coverage. False positives are easier to clean in the merge than missing categories.
 - **Large corpora (>500 papers):** Phase 1 scales well. Phase 2 needs chunking. Consider adding a Step 2.4 where chunks are merged before the final analysis.
