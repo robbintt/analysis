@@ -41,28 +41,19 @@ def init_db(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         CREATE TABLE IF NOT EXISTS papers (
-            filename    TEXT PRIMARY KEY,
-            ver         TEXT,
-            title       TEXT,
-            arxiv_id    TEXT,
-            source_url  TEXT,
-            tags        TEXT,
+            id              INTEGER PRIMARY KEY,
+            filename        TEXT NOT NULL UNIQUE,
+            title           TEXT,
+            arxiv_id        TEXT,
+            tags            TEXT,
             core_contribution TEXT,
-            indexed_at  TEXT DEFAULT (datetime('now')),
-            file_mtime_ns INTEGER,
-            file_size   INTEGER
+            indexed_at      TEXT DEFAULT (datetime('now')),
+            file_mtime_ns   INTEGER,
+            file_size       INTEGER
         )
     """
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_arxiv_id ON papers(arxiv_id)")
-
-    # Lightweight migration for older DBs that predate file metadata columns.
-    cols = {r[1] for r in conn.execute("PRAGMA table_info(papers)").fetchall()}
-    if "file_mtime_ns" not in cols:
-        conn.execute("ALTER TABLE papers ADD COLUMN file_mtime_ns INTEGER")
-    if "file_size" not in cols:
-        conn.execute("ALTER TABLE papers ADD COLUMN file_size INTEGER")
-
     conn.commit()
 
 
@@ -352,14 +343,12 @@ def index_directory(
 
     upsert_sql = """
         INSERT INTO papers
-            (filename, ver, title, arxiv_id, source_url, tags, core_contribution, indexed_at, file_mtime_ns, file_size)
+            (filename, title, arxiv_id, tags, core_contribution, indexed_at, file_mtime_ns, file_size)
         VALUES
-            (?, ?, ?, ?, ?, ?, ?, datetime('now'), ?, ?)
+            (?, ?, ?, ?, ?, datetime('now'), ?, ?)
         ON CONFLICT(filename) DO UPDATE SET
-            ver=excluded.ver,
             title=excluded.title,
             arxiv_id=excluded.arxiv_id,
-            source_url=excluded.source_url,
             tags=excluded.tags,
             core_contribution=excluded.core_contribution,
             indexed_at=datetime('now'),
@@ -382,10 +371,8 @@ def index_directory(
         st = fpath.stat()
         rec = (
             fname,
-            str(fm.get("ver", "")),
             str(fm.get("title", "")),
             str(fm.get("arxiv_id", "")),
-            str(fm.get("source_url", "")),
             normalize_tags(fm.get("tags", [])),
             str(fm.get("core_contribution", "")),
             int(st.st_mtime_ns),
