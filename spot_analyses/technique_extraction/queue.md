@@ -28,6 +28,7 @@ To minimize touchups when adding/removing topics:
 | `agentic_workflow_pipeline_design` | 92 | done | Reconciled into 8-category workflow-design taxonomy with standalone TTA-grade final doc | [analysis](agentic_workflow_pipeline_design.md), [papers](agentic_workflow_pipeline_design/papers.md), [option C](agentic_workflow_pipeline_design/option_c_extraction.md), [option A](agentic_workflow_pipeline_design/option_a_refinement.md) |
 | `continual_online_tta` | 60 | done | Spin-off from TTA set; 58/60 grep-matched (96.7%), reconciled into 8-category continual/online TTA taxonomy | [analysis](continual_online_tta.md), [papers](continual_online_tta/papers.md), [option C](continual_online_tta/option_c_extraction.md), [option A](continual_online_tta/option_a_refinement.md) |
 | `adaptive_compute_allocation` | 51 | done | Spin-off from TTC set; 51/51 grep-matched (100%), reconciled into 7-category adaptive compute-allocation taxonomy | [analysis](adaptive_compute_allocation.md), [papers](adaptive_compute_allocation/papers.md), [option C](adaptive_compute_allocation/option_c_extraction.md), [option A](adaptive_compute_allocation/option_a_refinement.md) |
+| `multi_agent_debate` | 153 | done | Debate-focused spin-off; 147/153 grep-matched (96.1%), reconciled into 8 core technique categories + 2 overlays | [analysis](multi_agent_debate.md), [papers](multi_agent_debate/papers.md), [option C](multi_agent_debate/option_c_extraction.md), [option A](multi_agent_debate/option_a_refinement.md) |
 
 ---
 
@@ -37,7 +38,6 @@ To minimize touchups when adding/removing topics:
 
 | group | est papers | status | scope (1-line) | source/dependency | FlatAgents/FlatMachines relevance |
 |---|---:|---|---|---|---|
-| `multi_agent_debate` | ~170 | queued | Multi-LLM debate/deliberation frameworks for answer quality improvement | Decomposed from agentic umbrella; TTC-linked | Tests concrete orchestration motifs for `flatmachines` (parallel branches + reconciliation/voting) and execution strategies (`mdap_voting`-style semantics). |
 
 ### P1 (high value, after P0)
 
