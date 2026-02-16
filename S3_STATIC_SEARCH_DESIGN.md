@@ -137,7 +137,7 @@ database pages needed for each query, avoiding downloading the entire file.
 
 This approach is proven at scale by projects like
 [Datasette Lite](https://lite.datasette.io/) and
-[sqlite-httpvfs](https://github.com/niccokunzmann/niccokunzmann.github.io).
+[sql.js-httpvfs](https://github.com/niccokunzmann/niccokunzmann.github.io).
 
 ### Preprocessing Pipeline
 
@@ -185,8 +185,8 @@ index.html
 └── docs/  ← full markdown files served on demand
 ```
 
-**Using [sqlite-httpvfs](https://github.com/niccokunzmann/niccokunzmann.github.io)
-or [wa-sqlite HTTP VFS](https://niccokunzmann.github.io/):**
+**Using [sql.js-httpvfs](https://github.com/niccokunzmann/niccokunzmann.github.io)
+or [wa-sqlite](https://niccokunzmann.github.io/) with an HTTP VFS backend:**
 
 1. Page loads → load sql.js WASM → open HTTP VFS pointing at `papers.sqlite` URL.
 2. User types → SQL query runs:
@@ -316,7 +316,8 @@ index.html
 // In search-worker.js
 function search(query) {
   const trigrams = extractTrigrams(query.toLowerCase());
-  // e.g., "transformer" → ["tra","ran","ans","nsf","sfo","for","orm","rme","mer"]
+  // e.g., "transformer" (11 chars) → 9 trigrams:
+  // ["tra","ran","ans","nsf","sfo","for","orm","rme","mer"]
 
   // Fetch only the shard files containing these trigrams
   const shardIds = new Set(trigrams.map(t => hashByte(t)));
