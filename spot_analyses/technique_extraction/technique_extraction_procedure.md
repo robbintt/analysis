@@ -409,6 +409,10 @@ Required sections in final `{group}.md`:
    - How reconciliation was performed
 
 3. **Final taxonomy** (grouped into coherent blocks)
+   - Taxonomy header must explicitly state category accounting, e.g.:
+     - `Final Taxonomy: N Technique Categories`
+     - or `Final Taxonomy: N Technique Categories + M Overlay Categories`
+   - If overlay/context categories are used (domains, benchmarks, surveys), label them explicitly and keep them separate from core mechanism categories.
    - For each category include:
      - one-line mechanism definition
      - important sub-families (bullets)
@@ -435,6 +439,7 @@ Required sections in final `{group}.md`:
 Before considering Phase 3 complete, validate:
 
 - **Category evidence:** each major category has representative `arxiv_id`s in the final doc.
+- **Taxonomy accounting clarity:** header explicitly states counts for technique categories (and any overlay categories).
 - **Non-trivial taxonomy:** categories are mechanism-level, not generic labels (`framework`, `pipeline`, `system`) unless explicitly scoped.
 - **Overlap handling:** large overlaps are explained with explicit merges/splits.
 - **Standalone clarity:** reader can understand decisions without seeing Option A/Option C raw files.
@@ -504,7 +509,7 @@ The link format `../../../{filepath}` assumes the standard layout where `papers.
 - [ ] Option C extraction written
 - [ ] LLM refinement pass done (scope matched to corpus size)
 - [ ] Merge written with final category list
-- [ ] Final doc meets TTA-grade standalone structure (header, method, taxonomy, reconciliation, coverage table)
+- [ ] Final doc meets TTA-grade standalone structure (header, method, taxonomy with explicit category counts, reconciliation, coverage table)
 - [ ] Final categories include representative key paper IDs (evidence density check)
 - [ ] Main analysis stub updated
 - [ ] Paper list regenerated from SQLite (Phase 4) if group membership changed

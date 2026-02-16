@@ -15,7 +15,9 @@
 
 ---
 
-## Final Taxonomy (Merged)
+## Final Taxonomy: 6 Core Technique Categories + 1 Deployment Overlay (Merged)
+
+Categories **1–6** below are mechanism-level technique families. Category **7** is a deployment/application overlay (kept for completeness, not counted as a core technique family).
 
 ### 1) Budgeted Halting & Overthinking Suppression (~20)
 Runtime policies that cut off redundant reasoning once marginal utility drops.
