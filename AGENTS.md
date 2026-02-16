@@ -27,6 +27,19 @@ In a head-to-head comparison, judged by GPT 5.3 Codex (High) in Pi coding harnes
 
 - The tags are currently not useful and will be regenerated in the future.
 - A metadata and analysis database (sqlite) is also committed in this repo.
+- Remaining failed items outside the 2024 bucket are all in 2025–2026: **91** total.
+  - 2025 (`25xxxx`): **85**
+  - 2026 (`26xxxx`): **6**
+  - Reason breakdown:
+    - arXiv PDF fetch `HTTPStatusError ... status=404`: **72**
+    - context overflow at 256k limit (`context_overflow: ... maximum context length is 256000 ...`): **11**
+    - OpenRouter provider generic error (`BadRequestError ... Provider returned error`): **3**
+    - PDF parse/decode issues: **4**
+      - `cryptography>=3.1 is required for AES algorithm`: **1**
+      - `Limit reached while decompressing...`: **1**
+      - `Invalid Elementary Object ... @23`: **1**
+      - `Invalid Elementary Object ... @26`: **1**
+    - OpenRouter authentication error (`AuthenticationError ... User not found.`): **1**
 
 ## ml_research_analysis_2024/
 
@@ -48,3 +61,31 @@ Trinity Large (`openrouter/arcee-ai/trinity-large-preview:free`) — no pony-alp
 
 - Same caveats as the 2025 set: tags need regeneration, work with frontmatter as-is.
 - Bulk run covering 2024 arXiv papers matched to a 2024 ML terms corpus.
+- Long-context overflow retry set (2024 batch, 44 arXiv IDs):
+  `2401.02524, 2401.03408, 2401.10819, 2401.12418, 2402.05515, 2402.09092, 2402.09739, 2402.18041, 2403.01546, 2403.13001, 2403.17125, 2404.09932, 2404.13721, 2404.17625, 2404.18976, 2405.00622, 2405.02082, 2405.17691, 2406.04344, 2406.04391, 2406.11039, 2407.12751, 2407.18384, 2408.01596, 2408.02111, 2408.09583, 2408.11779, 2408.13275, 2408.14340, 2409.02668, 2409.05556, 2409.09415, 2410.03446, 2410.05763, 2410.06235, 2410.10464, 2410.10523, 2410.24206, 2411.01042, 2411.05026, 2411.16433, 2411.17992, 2412.00800, 2412.14093`.
+- For the long-context retry step, I attempted `stepfun/step-3.5-flash:free` (first pass had a provider-name configuration issue).
+
+### >256k context-overflow triage (separate rerun queue; not counted as done)
+
+- `2402.09739` — requested **331,615** (over by **75,615**); estimated after references cut: **186,920** (**fits 256k**).
+- `2405.00622` — requested **305,419** (over by **49,419**); estimated after references cut: **240,831** (**fits 256k**).
+- `2408.01596` — requested **370,391** (over by **114,391**); estimated after immaterial cut (appendix/supplementary): **343,038** (**still over 256k**).
+- `2409.02668` — requested **352,800** (over by **96,800**); estimated after references cut: **342,784** (**still over 256k**).
+- `2409.09415` — requested **316,375** (over by **60,375**); no reliable references/appendix boundary detected (**still needs stronger truncation strategy**).
+- `2411.01042` — requested **451,413** (over by **195,413**); estimated after appendix cut: **377,056** (**still over 256k**).
+- `2502.05453` — requested **291,134** (over by **35,134**); no reliable references/appendix boundary detected (**still needs stronger truncation strategy**).
+- `2504.16270` — requested **276,192** (over by **20,192**); estimated after appendix cut: **234,426** (**fits 256k**).
+- `2506.14114` — requested **342,360** (over by **86,360**); estimated after appendix/supplementary cut: **189,426** (**fits 256k**).
+
+- Remaining failed items in the 2024 batch: **66** total.
+  - arXiv PDF fetch `HTTPStatusError ... status=404`: **32**
+    - Added pipeline guard: `download_pdf` HTTP 404 is now treated as permanent `pdf_404` (not transient), to prevent pending-loop retries (observed on `2503.10298`).
+  - context overflow at 256k limit (`context_overflow: ... maximum context length is 256000 ...`): **20**
+  - OpenRouter provider generic error (`BadRequestError ... Provider returned error`): **6**
+  - PDF parse errors (specific):
+    - `'NumberObject' object is not iterable`: **2**
+    - `Invalid Elementary Object ... @23`: **1**
+    - `Invalid Elementary Object ... @26`: **2**
+    - `Cannot find Root object in pdf`: **1**
+    - `invalid literal for int() with base 16: b'/C'`: **1**
+  - `unknown error`: **1**
