@@ -1,5 +1,11 @@
 # Reformulated Research Question: Thinking Blocks vs. Sequential Reasoning in the Response Block
 
+## Prompt for Github Copilot Agent (Opus 4.6)
+
+> Perform these tasks in sequence: 1. Reformulate the research question using the appropriate language from this recent corpus of LLM research. Use ripgrep and other tools to progressively search the 130,000 documents in each year.
+> 
+> Research question: why does the thinking block work better than training the model to sequentially reason in the regular response block? What is the reason for the dominance of thinking over sequential reasoning in the response block, if any? Is sequential reasoning still useful? Could a model call a self critique llm tool?
+
 ## Original Research Question
 
 > Why does the thinking block work better than training the model to sequentially reason in the regular response block? What is the reason for the dominance of thinking over sequential reasoning in the response block, if any? Is sequential reasoning still useful? Could a model call a self-critique LLM tool?
