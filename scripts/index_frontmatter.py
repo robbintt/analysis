@@ -42,23 +42,41 @@ def init_db(conn: sqlite3.Connection) -> None:
         """
         CREATE TABLE IF NOT EXISTS papers (
             id              INTEGER PRIMARY KEY,
-            filename        TEXT NOT NULL UNIQUE,
+            filename        TEXT NOT NULL,
             title           TEXT,
             arxiv_id        TEXT,
-            tags            TEXT,
             core_contribution TEXT,
             indexed_at      TEXT DEFAULT (datetime('now')),
             file_mtime_ns   INTEGER,
-            file_size       INTEGER
+            file_size       INTEGER,
+            source_dir      TEXT,
+            model           TEXT
         )
     """
     )
     conn.execute("CREATE INDEX IF NOT EXISTS idx_arxiv_id ON papers(arxiv_id)")
+
+    # Lightweight migrations for older DBs.
+    cols = {r[1] for r in conn.execute("PRAGMA table_info(papers)").fetchall()}
+    if "source_dir" not in cols:
+        conn.execute("ALTER TABLE papers ADD COLUMN source_dir TEXT")
+    if "model" not in cols:
+        conn.execute("ALTER TABLE papers ADD COLUMN model TEXT")
+
     conn.commit()
 
 
-def load_existing_meta(conn: sqlite3.Connection) -> Dict[str, Tuple[Optional[int], Optional[int]]]:
-    rows = conn.execute("SELECT filename, file_mtime_ns, file_size FROM papers").fetchall()
+def load_existing_meta(
+    conn: sqlite3.Connection,
+    source_dir: Optional[str] = None,
+) -> Dict[str, Tuple[Optional[int], Optional[int]]]:
+    if source_dir is not None:
+        rows = conn.execute(
+            "SELECT filename, file_mtime_ns, file_size FROM papers WHERE source_dir = ?",
+            (source_dir,),
+        ).fetchall()
+    else:
+        rows = conn.execute("SELECT filename, file_mtime_ns, file_size FROM papers").fetchall()
     return {r[0]: (r[1], r[2]) for r in rows}
 
 
@@ -301,7 +319,12 @@ def index_directory(
     conn.execute("PRAGMA temp_store=MEMORY")
     init_db(conn)
 
-    existing_meta = load_existing_meta(conn)
+    # Resolve to a stable directory name for source_dir tracking.
+    source_dir_name = dirpath.resolve().name
+
+    # Scope existing_meta to this source_dir so incremental/prune only
+    # see rows that belong to the directory being indexed.
+    existing_meta = load_existing_meta(conn, source_dir=source_dir_name)
     all_files = scan_markdown_files(dirpath)
     all_filenames = sorted(all_files.keys())
 
@@ -341,25 +364,19 @@ def index_directory(
         conn.close()
         return
 
-    upsert_sql = """
+    insert_sql = """
         INSERT INTO papers
-            (filename, title, arxiv_id, tags, core_contribution, indexed_at, file_mtime_ns, file_size)
+            (filename, title, arxiv_id, core_contribution, indexed_at,
+             file_mtime_ns, file_size, source_dir, model)
         VALUES
-            (?, ?, ?, ?, ?, datetime('now'), ?, ?)
-        ON CONFLICT(filename) DO UPDATE SET
-            title=excluded.title,
-            arxiv_id=excluded.arxiv_id,
-            tags=excluded.tags,
-            core_contribution=excluded.core_contribution,
-            indexed_at=datetime('now'),
-            file_mtime_ns=excluded.file_mtime_ns,
-            file_size=excluded.file_size
+            (?, ?, ?, ?, datetime('now'), ?, ?, ?, ?)
     """
+    delete_sql = "DELETE FROM papers WHERE filename = ?"
 
     inserted = 0
     updated = 0
     errors = 0
-    batch: List[Tuple[str, str, str, str, str, str, str, int, int]] = []
+    batch: list[tuple] = []
 
     for fname in targets:
         fpath = all_files[fname]
@@ -369,14 +386,17 @@ def index_directory(
             continue
 
         st = fpath.stat()
+        model_val = fm.get("model", None)
+        model_str = str(model_val).strip() if model_val not in (None, "", "''") else None
         rec = (
             fname,
             str(fm.get("title", "")),
             str(fm.get("arxiv_id", "")),
-            normalize_tags(fm.get("tags", [])),
             str(fm.get("core_contribution", "")),
             int(st.st_mtime_ns),
             int(st.st_size),
+            source_dir_name,
+            model_str,
         )
         batch.append(rec)
 
@@ -387,12 +407,19 @@ def index_directory(
 
         if len(batch) >= max(batch_size, 1):
             if not dry_run:
-                conn.executemany(upsert_sql, batch)
+                # Delete existing rows first, then insert fresh
+                del_batch = [(r[0],) for r in batch if r[0] in existing_meta]
+                if del_batch:
+                    conn.executemany(delete_sql, del_batch)
+                conn.executemany(insert_sql, batch)
                 conn.commit()
             batch = []
 
     if batch and not dry_run:
-        conn.executemany(upsert_sql, batch)
+        del_batch = [(r[0],) for r in batch if r[0] in existing_meta]
+        if del_batch:
+            conn.executemany(delete_sql, del_batch)
+        conn.executemany(insert_sql, batch)
         conn.commit()
 
     pruned = 0
@@ -401,7 +428,7 @@ def index_directory(
             # Git-scoped prune only removes files git reports as deleted in scope.
             to_delete = sorted(name for name in git_deleted if name in existing_meta)
         else:
-            # Full/incremental prune removes DB rows not present on disk.
+            # Prune rows from THIS source_dir that are no longer on disk.
             on_disk = set(all_filenames)
             to_delete = sorted(name for name in existing_meta if name not in on_disk)
 
@@ -417,7 +444,8 @@ def index_directory(
     mode = "git" if git_changed_spec is not None else ("full" if full else "incremental")
     dry = " [dry-run]" if dry_run else ""
     print(
-        f"Done ({mode}{dry}). upserted={inserted + updated} (inserted={inserted}, updated={updated}), "
+        f"Done ({mode}{dry}). source_dir={source_dir_name}, "
+        f"upserted={inserted + updated} (inserted={inserted}, updated={updated}), "
         f"errors={errors}, pruned={pruned}, total_in_db={total_in_db}"
     )
 
